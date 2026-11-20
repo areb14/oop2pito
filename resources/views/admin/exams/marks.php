@@ -1,0 +1,50 @@
+<?php
+/** @var \Core\View\View $this */
+/** @var array<string,mixed> $exam */
+/** @var array<int,array<string,mixed>> $classes */
+/** @var array<int,array<string,mixed>> $subjects */
+/** @var array<int,array<string,mixed>> $students */
+/** @var array<int,array<string,mixed>> $existing */
+/** @var array{class_id:int,subject_id:int} $selected */
+?>
+<?php $this->extend('layouts.app'); ?>
+<?php $this->section('breadcrumb'); ?><a href="<?= e(url('/admin/exams')) ?>" class="hover:text-brand-600">Exams</a> / Marks<?php $this->endSection(); ?>
+<?php $this->section('main'); ?>
+<form method="GET" class="card mb-4 p-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-4">
+        <select name="class_id" class="form-select" data-cascade="class" data-target-section="#marks_section" required><option value="">Class</option><?php foreach($classes as $c):?><option value="<?=(int)$c['id']?>" <?=$selected['class_id']===(int)$c['id']?'selected':''?>><?=e((string)$c['name'])?></option><?php endforeach;?></select>
+        <select name="section_id" id="marks_section" class="form-select"><option value="">All sections</option><?php foreach($sections as $s): if($selected['class_id'] && (int)$s['class_id']!==$selected['class_id']) continue; ?><option value="<?=(int)$s['id']?>" <?=$selected['section_id']===(int)$s['id']?'selected':''?>><?=e((string)($s['class_name'].' - '.$s['name']))?></option><?php endforeach;?></select>
+        <select name="subject_id" class="form-select" required><option value="">Subject</option><?php foreach($subjects as $s):?><option value="<?=(int)$s['id']?>" <?=$selected['subject_id']===(int)$s['id']?'selected':''?>><?=e((string)$s['name'])?></option><?php endforeach;?></select>
+        <button class="btn btn-primary justify-center"><i class="fa-solid fa-magnifying-glass"></i> Load</button>
+    </div>
+</form>
+
+<?php if (!empty($students)): ?>
+<div class="mb-3"><span class="badge badge-slate">Workflow status: <?= e((string) ($status ?? 'draft')) ?></span></div>
+<form method="POST" action="<?= e(url('/admin/exams/' . $exam['id'] . '/marks')) ?>" class="card overflow-hidden" data-loading>
+    <?= csrf_field() ?>
+    <input type="hidden" name="class_id" value="<?= $selected['class_id'] ?>">
+    <input type="hidden" name="section_id" value="<?= $selected['section_id'] ?>">
+    <input type="hidden" name="subject_id" value="<?= $selected['subject_id'] ?>">
+    <table class="data-table">
+        <thead><tr><th>Roll</th><th>PRN</th><th>Name</th><th>Marks (out of <?= e((string) ($fullMarks ?? 100)) ?>)</th><th>Absent</th></tr></thead>
+        <tbody>
+        <?php foreach ($students as $st): $sid = (int) $st['id']; $m = $existing[$sid]['marks_obtained'] ?? ''; $ab = (int) ($existing[$sid]['is_absent'] ?? 0) === 1; ?>
+            <tr>
+                <td><?= e((string) ($st['roll_no'] ?? '—')) ?></td>
+                <td class="font-mono text-xs"><?= e((string) ($st['prn'] ?? '—')) ?></td>
+                <td class="font-medium text-slate-800"><?= e((string) ($st['first_name'] . ' ' . $st['last_name'])) ?></td>
+                <td><input type="number" step="0.01" min="0" max="<?= e((string) ($fullMarks ?? 100)) ?>" name="marks[<?= $sid ?>]" value="<?= $ab ? '' : e((string) $m) ?>" class="form-input w-32" data-marks-input <?= $ab ? 'disabled' : '' ?>></td>
+                <td><input type="checkbox" name="absent[<?= $sid ?>]" value="1" <?= $ab ? 'checked' : '' ?> data-absent-toggle aria-label="Mark <?= e((string) ($st['first_name'] . ' ' . $st['last_name'])) ?> absent"></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <div class="border-t border-slate-200 px-4 py-3 text-right"><button class="btn btn-primary"><i class="fa-solid fa-check"></i> Save marks</button></div>
+</form>
+<?php elseif ($selected['class_id']): ?>
+    <div class="card p-8 text-center text-slate-400">No students in this class.</div>
+<?php else: ?>
+    <div class="card p-8 text-center text-slate-400">Select class and subject to enter marks.</div>
+<?php endif; ?>
+<?php $this->endSection(); ?>
