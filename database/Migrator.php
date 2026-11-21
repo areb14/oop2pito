@@ -163,9 +163,15 @@ final class Migrator
         $warnings = [];
         try {
             $version = (string) $this->conn->scalar('SELECT VERSION()');
-        } catch (\Throwable) {
-            return ['errors' => ['The database is not reachable.'], 'warnings' => []];
-        }
+       } catch (\Throwable $e) {
+    $detail = \App\Services\Setup\SetupService::redact(
+        ($e->getPrevious() ?? $e)->getMessage()
+    );
+
+    error_log('[db-upgrade-preflight] ' . $detail);
+
+    return ['errors' => ['The database is not reachable.'], 'warnings' => []];
+}
         if ($this->conn->isPostgres()) {
             if ((int) $this->conn->scalar('SHOW server_version_num') < 120000) {
                 $errors[] = 'PostgreSQL 12 or newer is required (generated columns).';
