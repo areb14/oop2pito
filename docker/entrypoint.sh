@@ -10,7 +10,7 @@
 set -euo pipefail
 cd /var/www/html
 
-PORT="${PORT:-8000}"
+PORT="${PORT:-8080}"
 
 # --- Bind Apache to the platform port -------------------------------------
 sed -ri "s/^Listen .*/Listen ${PORT}/" /etc/apache2/ports.conf
